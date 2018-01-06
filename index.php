@@ -5,6 +5,6 @@
 		<title></title>
 	</head>
 	<body>
-		<p> Test </p>		
+		<p> SSH Test </p>		
 	</body>
 </html>
