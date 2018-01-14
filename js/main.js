@@ -13,6 +13,10 @@ let raycaster, mouse;
 let dirSphere, dirSphereId;
 let ship, shipModelId; //The ship is a group of the cameraGroup and ship model
 
+let speed = 0.025;
+let dir; // the direction the ship will travel
+let intersectDS; // the POI on the dirSphere
+
 let cameraLocation = { x:0, y:0, z:16 };
 
 init();
@@ -55,12 +59,30 @@ function init() {
 	
 	controls = new THREE.OrbitControls( camera, renderer.domElement );
 	window.addEventListener( 'resize', onWindowResize, false);
-	window.addEventListener( 'mousemove', onMouseMove, false );
-	document.addEventListener( 'keydown', onKeyDown, false );
+	window.addEventListener( 'dblclick', onDblClick, false );
 
 }
 
+/*
+ * This is called by the render loop.
+ * It multiplies the global var dir by the var speed and moves the ship
+ * in dir at speed units.
+ * NOTE: Need to do something with trig to makes sure speed is the same on diagonals.
+ */
+function moveShip() {
+	if(dir == null) {
+		return;
+	}
+
+
+
+	ship.position.x += dir.x * speed;
+	ship.position.y += dir.y * speed;
+	ship.position.z += dir.z * speed;
+}
+
 function setCameraProperties() {
+
 	// Direction Sphere - Used to control ship movement
 	let dirSphereGeo = new THREE.SphereGeometry(2, 16, 16);
 	let dirSphereMat = new THREE.MeshBasicMaterial( {color: 0x40ff00, wireframe: true } );
@@ -71,10 +93,7 @@ function setCameraProperties() {
 	dirSphere.renderOrder = 1000;
 	dirSphere.material.side = THREE.BackSide;
 
-	// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-	camera.add( dirSphere );  // add this back
-	// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+	camera.add( dirSphere ); 
 }
 
 function addReferencePoints() {
@@ -99,6 +118,9 @@ function addReferencePoints() {
 	}
 }
 
+/*
+ * Currently not in use.
+ */
 function onDocumentMouseMove( event ) {
 	event.preventDefault();
 	// Change this late to account for inaccurate raycasting.
@@ -106,14 +128,33 @@ function onDocumentMouseMove( event ) {
 	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 }
 
-function onMouseMove( event ) {
+
+/*
+ * There is no point in checking if there is no intersection since inside sphere.
+ */
+function onDblClick( event ) {
 	event.preventDefault();
 	// calculate mouse position in normalized device coordinates
 	// (-1 to +1) for both components
-
 	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
 	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
+	raycaster.setFromCamera( mouse, camera ); //updates ray from camera position.
+	intersectDS = raycaster.intersectObject( ship.children[1].children[0] ); // the POI on the dirSphere
+	let point = intersectDS[0].point;
+
+	let camVector = new THREE.Vector3();
+	camVector.setFromMatrixPosition( camera.matrixWorld );
+
+	// Finding the direction vector for the ship movement. Cam POI to dirSphere POI
+	let dirX = point.x - camVector.x; //camera.position.x;
+	let dirY = point.y - camVector.y; //camera.position.y;
+	let dirZ = point.z - camVector.z; //camera.position.z;
+
+	dir = new THREE.Vector3( dirX, dirY, dirZ );
+	console.log( point );
+	console.log( camera.position );
+	console.log( dir );
 }
 
 function onWindowResize() {
@@ -132,63 +173,19 @@ function animate() {
 
 function render() {
 	
-	
-	raycaster.setFromCamera( mouse, camera ); //updates ray from camera position.
-	
-	let intersects = raycaster.intersectObjects( ship.children[1].children );
-
-	if(intersects.length > 0) {
-		ship.children[1].children[0].material.color.set( 0xf600ff );
-	} else {
-		ship.children[1].children[0].material.color.set( 0x40ff00 );
-	}
-	
-	/*
-	for ( var i = 0; i < intersects.length; i++ ) {
-		intersects[i].object.material.color.set( 0xf600ff );
-		//ship.children[1].children[0].material.color.setHex( 0xff0000 );  //This works
-	}
-	/*
-	let INTERSECTED;
-	if ( intersects.length > 0 ) {
-		if ( INTERSECTED != intersects[ 0 ].object ) {
-			if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
-			INTERSECTED = intersects[ 0 ].object;
-			INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
-			INTERSECTED.material.color.setHex( 0xff00ff );
+	if(intersectDS) {
+		if(intersectDS.length > 0) {
+			ship.children[1].children[0].material.color.set( 0xf600ff );
 		}
+		intersectDS = null;
 	} else {
-		if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
-		INTERSECTED = null;
-	} */
+			ship.children[1].children[0].material.color.set( 0x40ff00 );
+	}
 
-
+	moveShip();
 	renderer.render( scene, camera );
 }
 
-
-
-function onKeyDown ( event ) {
-	var rotateAngle = 0.05;
-
-	switch( event.keyCode ) {
-
-		case 68: /*D*/
-
-		ship.translateY( -0.15 );
-
-
-		break;
-
-		case 65: /*A*/
-
-		ship.translateY( 0.15 );
-
-		break;
-
-	}
-
-};
 
 
 
