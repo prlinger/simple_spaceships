@@ -88,123 +88,225 @@ function render() {
 }
 */
 
-let container, scene, camera;
-let renderer, controls;
-let dirSphere, ship; //The ship is a group of the cameraGroup and ship model
+/*
 
-let cameraLocation = { x:0, y:0, z:16 };
-
+var container, stats;
+var camera, scene, raycaster, renderer;
+var mouse = new THREE.Vector2(), INTERSECTED;
+var radius = 100, theta = 0;
 init();
-addReferencePoints();
 animate();
-
 function init() {
-	container = document.getElementById( 'container' );
-
-	// Renderer
-	renderer = new THREE.WebGLRenderer( { antialias: true });
-	renderer.setSize( window.innerWidth, window.innerHeight );
-	document.body.appendChild( renderer.domElement );
-
-	// Scene
+	container = document.createElement( 'div' );
+	document.body.appendChild( container );
+	var info = document.createElement( 'div' );
+	info.style.position = 'absolute';
+	info.style.top = '10px';
+	info.style.width = '100%';
+	info.style.textAlign = 'center';
+	info.innerHTML = '<a href="http://threejs.org" target="_blank" rel="noopener">three.js</a> webgl - interactive cubes';
+	container.appendChild( info );
+	camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
 	scene = new THREE.Scene();
-	scene.background = new THREE.Color( 0xffffff );
-
-	// The camera
-	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-	camera.position.set( cameraLocation.x, cameraLocation.y, cameraLocation.z );
-	//scene.add( camera );
-
-
-	// Direction Sphere - Used to control ship movement
-	let dirSphereGeo = new THREE.SphereGeometry(2, 16, 16);
-	let dirSphereMat = new THREE.MeshBasicMaterial( {color: 0x40ff00, wireframe: true } );
-	dirSphere = new THREE.Mesh( dirSphereGeo, dirSphereMat );
-
-	dirSphere.material.depthTest = true;
-	dirSphere.renderOrder = 1000;
-	camera.add( dirSphere );
-
-	// Ship Model Creation
-	let shipGeometry = new THREE.BoxGeometry( 2, 2, 2, 2, 2, 2 );
-	let shipMaterial = new THREE.MeshBasicMaterial( {color: 0x0066ff, wireframe: true } );
-	let shipModel = new THREE.Mesh( shipGeometry, shipMaterial );
-
-	ship = new THREE.Group();
-	ship.add( shipModel );
-	ship.add( camera );
-
-	scene.add( ship );
-	
-
-	controls = new THREE.OrbitControls( camera, renderer.domElement );
-	window.addEventListener( 'resize', onWindowResize, false);
-	document.addEventListener( 'keydown', onKeyDown, false );
-
-}
-
-function setCameraProperties() {
-
-}
-
-function addReferencePoints() {
-	let hedronGeometry = new THREE.OctahedronGeometry( 0.1, 1 );
-	let hedronMaterial = new THREE.MeshBasicMaterial( {color: 0xff0000, wireframe: false} )
-
-	for ( let i = -24; i <= 24; i += 4 ) {
-		for( let m = -24; m <= 24; m += 4 ){
-			for( let n = -24; n <= 24; n += 4 ) {
-				let hedron = new THREE.Mesh( hedronGeometry, hedronMaterial );
-				hedron.position.x = i;
-				hedron.position.y = m;
-				hedron.position.z = n;
-
-				scene.add( hedron );
-			}
-		}
+	scene.background = new THREE.Color( 0xf0f0f0 );
+	var light = new THREE.DirectionalLight( 0xffffff, 1 );
+	light.position.set( 1, 1, 1 ).normalize();
+	scene.add( light );
+	var geometry = new THREE.BoxBufferGeometry( 20, 20, 20 );
+	for ( var i = 0; i < 2000; i ++ ) {
+		var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+		object.position.x = Math.random() * 800 - 400;
+		object.position.y = Math.random() * 800 - 400;
+		object.position.z = Math.random() * 800 - 400;
+		object.rotation.x = Math.random() * 2 * Math.PI;
+		object.rotation.y = Math.random() * 2 * Math.PI;
+		object.rotation.z = Math.random() * 2 * Math.PI;
+		object.scale.x = Math.random() + 0.5;
+		object.scale.y = Math.random() + 0.5;
+		object.scale.z = Math.random() + 0.5;
+		scene.add( object );
 	}
-}
+	raycaster = new THREE.Raycaster();
+	renderer = new THREE.WebGLRenderer();
+	renderer.setPixelRatio( window.devicePixelRatio );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	container.appendChild(renderer.domElement);
 
+
+
+	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+	window.addEventListener( 'resize', onWindowResize, false );
+}
 function onWindowResize() {
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
 	renderer.setSize( window.innerWidth, window.innerHeight );
 }
+function onDocumentMouseMove( event ) {
+	event.preventDefault();
+	//.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	//mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+	mouse.x = ( event.offsetX / renderer.domElement.width ) * 2 - 1;
+    mouse.y = -( event.offsetY / renderer.domElement.height ) * 2 + 1;
+
+    var deltaX = event.clientX - mouse.x;
+    var deltaY = event.clientY - mouse.y; 
+
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObjects(scene.children, true);
+}
 
 function animate() {
 	requestAnimationFrame( animate );
-
-	controls.update();
-
 	render();
 }
-
 function render() {
+	theta += 0.0;
+	camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
+	camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );
+	camera.position.z = radius * Math.cos( THREE.Math.degToRad( theta ) );
+	camera.lookAt( scene.position );
+	camera.updateMatrixWorld();
+	// find intersections
+	raycaster.setFromCamera( mouse, camera );
+	var intersects = raycaster.intersectObjects( scene.children );
+	if ( intersects.length > 0 ) {
+		if ( INTERSECTED != intersects[ 0 ].object ) {
+			if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+			INTERSECTED = intersects[ 0 ].object;
+			INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+			INTERSECTED.material.emissive.setHex( 0xff0000 );
+		}
+	} else {
+		if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+		INTERSECTED = null;
+	}
+	renderer.render( scene, camera );
+}
+*/
+
+
+var container, stats;
+var camera, scene, raycaster, renderer;
+var mouse, INTERSECTED;
+var radius = 100, theta = 0;
+init();
+animate();
+function init() {
+	container = document.createElement( 'div' );
+
+	renderer = new THREE.WebGLRenderer();
+	renderer.setPixelRatio( window.devicePixelRatio );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	document.body.appendChild( renderer.domElement );
+
+	scene = new THREE.Scene();
+	scene.background = new THREE.Color( 0xf0f0f0 );
+
+	camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
+	camera.position.set( 0, 0, 40 );
+	/*
+	var light = new THREE.DirectionalLight( 0xffffff, 1 );
+	light.position.set( 1, 1, 1 ).normalize();
+	scene.add( light ); */
+
+	raycaster = new THREE.Raycaster();
+	mouse = new THREE.Vector2();
+
+	var geometry = new THREE.BoxGeometry( 20, 20, 20 );
+
+	let shipGeometry = new THREE.BoxBufferGeometry( 20, 20, 20, 2, 2, 2 );
+	let shipMaterial = new THREE.MeshBasicMaterial( {color: 0x0066ff, wireframe: true } );
+	let shipModel = new THREE.Mesh( shipGeometry, shipMaterial );
+
+	scene.add(shipModel);
+
+	/*
+	for ( var i = 0; i < 2000; i ++ ) {
+		var object = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: Math.random() * 0xffffff } ) );
+		object.position.x = Math.random() * 800 - 400;
+		object.position.y = Math.random() * 800 - 400;
+		object.position.z = Math.random() * 800 - 400;
+		object.rotation.x = Math.random() * 2 * Math.PI;
+		object.rotation.y = Math.random() * 2 * Math.PI;
+		object.rotation.z = Math.random() * 2 * Math.PI;
+		object.scale.x = Math.random() + 0.5;
+		object.scale.y = Math.random() + 0.5;
+		object.scale.z = Math.random() + 0.5;
+		scene.add( object );
+	} */
+	
+
+	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+	window.addEventListener( 'resize', onWindowResize, false );
+}
+function onWindowResize() {
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+}
+function onDocumentMouseMove( event ) {
+	event.preventDefault();
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+}
+
+function animate() {
+	requestAnimationFrame( animate );
+	render();
+}
+function render() {
+
+	raycaster.setFromCamera( mouse, camera ); //updates ray from camera position.
+	
+	let intersects = raycaster.intersectObjects( scene.children );
+	console.log(intersects.length );
+
+	if(intersects.length > 0) {
+		scene.children[0].material.color.set( 0xf600ff );
+	} else {
+		scene.children[0].material.color.set( 0xff0000 );
+	}
+	
+	/*
+	for ( var i = 0; i < intersects.length; i++ ) {
+		intersects[i].object.material.color.set( 0xf600ff );
+		//ship.children[1].children[0].material.color.setHex( 0xff0000 );  //This works
+	} */
+
+	/*
+	theta += 0.1;
+	camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
+	camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );
+	camera.position.z = radius * Math.cos( THREE.Math.degToRad( theta ) );
+	camera.lookAt( scene.position );
+	camera.updateMatrixWorld();
+	
+	raycaster.setFromCamera( mouse, camera );
+	var intersects = raycaster.intersectObjects( scene.children );
+	if ( intersects.length > 0 ) {
+		if ( INTERSECTED != intersects[ 0 ].object ) {
+			if ( INTERSECTED ) INTERSECTED.material.color.set( 0xf600ff );// material.emissive.setHex( INTERSECTED.currentHex );
+			INTERSECTED = intersects[ 0 ].object;
+			INTERSECTED.currentHex = INTERSECTED.material.color.set( 0xffffff );//material.emissive.getHex();
+			//INTERSECTED.material.color.set( 0xff0000 );//material.emissive.setHex( 0xff0000 );
+		}
+	} else {
+		if ( INTERSECTED ) INTERSECTED.material.color.set( 0xf600ff );//material.emissive.setHex( INTERSECTED.currentHex );
+		INTERSECTED = null;
+	} */
 	renderer.render( scene, camera );
 }
 
 
-
-function onKeyDown ( event ) {
-	var rotateAngle = 0.05;
-
-	switch( event.keyCode ) {
-
-		case 68: /*D*/
-
-		ship.translateY( -0.15 );
+// https://stackoverflow.com/questions/25024044/three-js-raycasting-with-camera-as-origin?rq=1
+// https://stackoverflow.com/questions/29366109/three-js-three-projector-has-been-moved-to
+// http://jsfiddle.net/rohitghatol/pNrT7/
+// https://stackoverflow.com/questions/29534613/raycast-doesnt-hit-mesh-when-casted-from-the-inside
 
 
-		break;
 
-		case 65: /*A*/
-
-		ship.translateY( 0.15 );
-
-		break;
-
-	}
-
-};
 
 
