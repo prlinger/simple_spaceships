@@ -92,6 +92,7 @@ function setCameraProperties() {
 	dirSphere.material.depthTest = true;
 	dirSphere.renderOrder = 1000;
 	dirSphere.material.side = THREE.BackSide;
+	dirSphere.material.visible = false;
 
 	camera.add( dirSphere ); 
 }
