@@ -12,6 +12,7 @@ let renderer, controls;
 let raycaster, mouse;
 let dirSphere, dirSphereId;
 let ship, shipModelId; //The ship is a group of the cameraGroup and ship model
+let stationGroup;
 
 let speed = 0.025;
 let dir; // the direction the ship will travel
@@ -45,6 +46,10 @@ function init() {
 	raycaster = new THREE.Raycaster();
 	mouse = new THREE.Vector2();
 
+	// Space Station Loading
+	// The station group is returned and added
+	scene.add( stationInit() );
+
 	// Ship Model Creation
 	let shipGeometry = new THREE.BoxBufferGeometry( 2, 2, 2, 2, 2, 2 );
 	let shipMaterial = new THREE.MeshBasicMaterial( {color: 0x0066ff, wireframe: true } );
@@ -62,6 +67,22 @@ function init() {
 	window.addEventListener( 'dblclick', onDblClick, false );
 
 }
+
+// This adds a space station
+// returns a station group.
+function stationInit() {
+	let stationGroup = new THREE.Group();
+
+	let stnGeo = new THREE.SphereBufferGeometry( 4, 16, 16 );
+	let stnMat = new THREE.MeshBasicMaterial( {color: 0x4425a3, wireframe: true } );
+	let stnModel = new THREE.Mesh( stnGeo, stnMat );
+	stnModel.position.set( 0, 0, -16 );
+	stationGroup.add( stnModel );
+
+	return stationGroup;
+}
+
+
 
 /*
  * This is called by the render loop.
